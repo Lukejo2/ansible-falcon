@@ -1,0 +1,64 @@
+apiVersion: v1
+data:
+  DISCOVERY_TYPE: single-node
+kind: ConfigMap
+metadata:
+  labels:
+    app: registy
+  name: elastic-config
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elastic
+  labels:
+    app: elastic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elastic
+  template:
+    metadata:
+      labels:
+        app: elastic
+    spec:
+      hostNetwork: true
+      containers:
+      - name: elastic
+        image: localhost:32000/elasticsearch:7.16.2
+        envFrom:
+        - configMapRef:
+            name: elastic-config
+        ports:
+        - containerPort: 9200
+        - containerPort: 9300
+        volumeMounts:
+        - name: elastic
+          mountPath: /data
+      volumes:
+      - name: elastic
+        hostPath:
+          path: /data/elastic
+          type: DirectoryOrCreate
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: elastic
+  namespace: default
+  labels:
+    app: elastic
+spec:
+  ports:
+    - protocol: TCP
+      name: '9200'
+      port: 9200
+    - protocol: TCP
+      name: '9300'
+      port: 9300
+  selector:
+    app: elastic
+  type: ClusterIP
+

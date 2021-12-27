@@ -1,0 +1,250 @@
+---
+- name: Setup Users
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Create Falcon user
+    ansible.builtin.user:
+      name: falcon
+      uid: 2000
+      groups:
+        - docker
+        - microk8s
+  - name: Create Falcon group
+    ansible.builtin.group:
+      name: falcon
+      gid: 2000
+  - name: Add Falcon ssh keys
+    authorized_key:
+      user: falcon
+      state: present
+      key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCeSxMImubfmwY+lZ00V58t0haQj71yf4UtETu5wtLKEIoyaUj4yAYiCH0RuyoFNvWE/JoCUGcAJ8s8wOYie5gNZSU2bEyG3xeC0/Kvd7po0jCNxWpM8pym00+Kudk6uKRieYMmmOWbJAYLrAk9DyXbwmEVboTKVWpzLPrZs4NwFI5A6xJKTunhhdMfBamuSaSlkSMHio+GiBnOmgwtrcd6Ec5W8+O8hWixWgWykFIEpQC6JJPHvCsqsOQ6dcBwB7tSuyaItQuHMBhR9pSVJO9tTjTNliPdr39cEAlcnecHV1eLlVrKCfwyct+fjoNF3Od5+Ko48nh54UY7qEXxRAEd luke@DESKTOP-SD5FQHP"
+  - name: Create git directory
+    file:
+      path: "$HOME/git"
+      mode: "u=rwx"
+      recurse: yes
+      state: directory
+- name: Setup System Packages
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Upgrade OS
+    apt:
+      upgrade: dist
+  - name: Install Required Packages
+    apt:
+      pkg:
+      - git
+      - python3-pip
+      - wget
+      state: present
+      update_cache: yes
+- name: Setup Docker
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Install Docker Dependencies
+    apt:
+      pkg:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
+      state: present
+      update_cache: yes
+  - name: add Docker GPG key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+  - name: Add docker repository to apt
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu focal stable
+      state: present
+  - name: Install docker
+    apt:
+      pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      state: latest
+      update_cache: yes
+  - name: Check Docker Active
+    service:
+      name: docker
+      state: started
+      enabled: yes
+- name: Setup MicroK8s
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Install Microk8s
+    community.general.snap:
+      name: microk8s
+      classic: yes
+      channel: '1.22/stable'
+  - name: 'Enable Microk8s Addons'
+    ansible.builtin.shell: microk8s enable dns dashboard ingress registry storage
+  - name: Create .kube directory
+    file:
+      path: /home/falcon/.kube
+      mode: "u=rwx"
+      recurse: yes
+      state: directory
+  - name: Extract kubeconfig file
+    ansible.builtin.shell: microk8s config > /home/falcon/.kube/config
+  - name: Change kubeconfig file permission
+    file:
+      path: /home/falcon/.kube/config 
+      owner: "falcon"
+  - name: Create dashboard token
+    ansible.builtin.shell: microk8s kubectl -n kube-system describe secret $(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1) > /home/falcon/dashboard-token
+  - name: Change dashboard token file permission
+    file:
+      path: /home/falcon/dashboard-token
+      mode: '0600'
+      owner: "falcon" 
+- name: Setup Docker Images
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Tag and add to local registry
+    ansible.builtin.shell: |
+      docker pull {{ item }}
+      docker tag {{ item }} localhost:32000/{{ item }}
+      docker push localhost:32000/{{ item }}
+    with_items:
+      - adminer:4.8.1
+      - elasticsearch:7.16.2
+      - gitea/gitea:1.15.8
+      - kibana:7.16.2
+      - postgres:14.1
+      - registry:2
+      - ubuntu:20.04
+- name: Setup Minecraft
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Clone Minecraft
+    ansible.builtin.git:
+      repo:  https://github.com/Lukejo2/docker-minecraft.git
+      depth: 1
+      force: true
+      refspec: a2598520d99d779424969a191828fc7d78577760
+      dest: $HOME/git/docker-minecraft
+      version: a2598520d99d779424969a191828fc7d78577760
+    ignore_errors: yes
+  - name: Download server.jar
+    ansible.builtin.shell:
+      cmd: |
+        wget https://launcher.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar
+      chdir: $HOME/git/docker-minecraft  
+  - name: Build Docker Image
+    ansible.builtin.shell:
+      cmd: |
+        docker build . -t localhost:32000/minecraft:1.18.1
+        docker push localhost:32000/minecraft:1.18.1
+      chdir: $HOME/git/docker-minecraft
+- name: Setup Samba
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Clone Samba
+    ansible.builtin.git:
+      repo:  https://github.com/Lukejo2/docker-samba.git
+      depth: 1
+      force: true
+      refspec: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
+      dest: $HOME/git/docker-samba
+      version: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
+    ignore_errors: yes
+  - name: Build Docker Image
+    ansible.builtin.shell:
+      cmd: |
+        docker build . -t localhost:32000/samba:4.15.2
+        docker push localhost:32000/samba:4.15.2
+      chdir: $HOME/git/docker-samba
+- name: Setup Plex
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Clone Plex
+    ansible.builtin.git:
+      repo: 'https://github.com/plexinc/pms-docker.git'
+      depth: 1
+      force: true
+      refspec: 766870b75cf72916e0930856d5a15e7f579bbe88
+      dest: $HOME/git/pms-docker
+      version: 766870b75cf72916e0930856d5a15e7f579bbe88
+    ignore_errors: yes
+  - name: Build Docker Image
+    ansible.builtin.shell:
+      cmd: |
+        docker build -t localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88 -f Dockerfile.arm64 .
+        docker push localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88
+      chdir: $HOME/git/pms-docker
+- name: Create Kubernetes Deployments
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Create kubernetes directory
+    file:
+      path: $HOME/kubernetes
+      mode: "u=rwx"
+      recurse: yes
+      state: directory
+  - name: Copy yaml
+    ansible.builtin.copy:
+      src: ../kubernetes/{{ item }}
+      dest: $HOME/kubernetes/{{ item }}
+      follow: no
+      owner: root
+      group: root
+      mode: '0644'
+    with_items:
+     - adminer.yaml
+     - dashboard.yaml
+     - elastic.yaml
+     - gitea.yaml
+     - ingress.yaml
+     - kibana.yaml
+     - minecraft.yaml
+     - plex.yaml
+     - postgres.yaml
+     - registry.yaml
+     - samba.yaml
+  - name: Copy Secrets
+    ansible.builtin.copy:
+      src: ../secrets/secrets.yaml
+      dest: $HOME/kubernetes/secrets.yaml
+      follow: no
+      owner: root
+      group: root
+      mode: '0644'
+  - name: kubectl apply -f
+    ansible.builtin.shell:
+      cmd: microk8s.kubectl apply -f ./{{ item }}
+      chdir: $HOME/kubernetes
+    with_items:
+     - secrets.yaml
+     - adminer.yaml
+     - dashboard.yaml
+     - elastic.yaml
+     - gitea.yaml
+     - kibana.yaml
+     - minecraft.yaml
+     - plex.yaml
+     - postgres.yaml
+     - registry.yaml
+     - samba.yaml
+     - ingress.yaml

@@ -1,0 +1,50 @@
+apiVersion: v1
+data:
+  PLEX_UID: "2000"
+  PLEX_GUI: "2000"
+kind: ConfigMap
+metadata:
+  labels:
+    app: plex
+  name: plex-config
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plex
+  labels:
+    app: plex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plex
+  template:
+    metadata:
+      labels:
+        app: plex
+    spec:
+      hostNetwork: true
+      containers:
+      - name: plex
+        image: localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88
+        envFrom:
+          - configMapRef:
+              name: plex-config
+          - secretRef:
+              name: plex-secrets
+        volumeMounts:
+        - name: plex-data
+          mountPath: /data
+        - name: plex-config
+          mountPath: /config
+      volumes:
+      - name: plex-data
+        hostPath:
+          path: /data/plex
+          type: DirectoryOrCreate
+      - name: plex-config
+        hostPath:
+          path: /data/plex-config
+          type: DirectoryOrCreate
