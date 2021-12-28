@@ -127,6 +127,26 @@
       - postgres:14.1
       - registry:2
       - ubuntu:20.04
+- name: Setup Falcon Fans
+  hosts: falcon
+  become: yes
+  become_user: root
+  tasks:
+  - name: Clone Falcon Fans
+    ansible.builtin.git:
+      repo:  https://github.com/Lukejo2/python-falcon-ipmi-fan-driver.git
+      depth: 1
+      force: true
+      refspec: 1fc7151e7118c8960d0feb778fd7832538082aa2
+      dest: $HOME/git/falcon-fans
+      version: 1fc7151e7118c8960d0feb778fd7832538082aa2
+    ignore_errors: yes
+  - name: Build Docker Image
+    ansible.builtin.shell:
+      cmd: |
+        docker build . -t localhost:32000/falcon-fans:1.0.0
+        docker push localhost:32000/falcon-fans:1.0.0
+      chdir: $HOME/git/falcon-fans
 - name: Setup Minecraft
   hosts: falcon
   become: yes
@@ -144,6 +164,7 @@
   - name: Download server.jar
     ansible.builtin.shell:
       cmd: |
+        # TODO : Only download if server.jar does not exist
         wget https://launcher.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar
       chdir: $HOME/git/docker-minecraft  
   - name: Build Docker Image
@@ -215,6 +236,7 @@
      - adminer.yaml
      - dashboard.yaml
      - elastic.yaml
+     - falcon-fans.yaml
      - gitea.yaml
      - ingress.yaml
      - kibana.yaml
@@ -240,6 +262,7 @@
      - adminer.yaml
      - dashboard.yaml
      - elastic.yaml
+     - falcon-fans.yaml
      - gitea.yaml
      - kibana.yaml
      - minecraft.yaml
