@@ -42,9 +42,10 @@ spec:
       volumes:
       - name: plex-data
         hostPath:
-          path: /data/plex
+          path: /data/samba
           type: DirectoryOrCreate
       - name: plex-config
         hostPath:
           path: /data/plex-config
           type: DirectoryOrCreate
+

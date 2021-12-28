@@ -1,0 +1,38 @@
+apiVersion: v1
+data:
+  IPMI_HOST: '192.168.1.101'
+  IPMI_USERNAME: ADMIN
+  INTERVAL: '300'
+  MAX_PERCENT: '50'
+  CPU_THRESHOLD: '60'
+kind: ConfigMap
+metadata:
+  labels:
+    app: falcon-fans
+  name: falcon-fans-config
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falcon-fans
+  labels:
+    app: falcon-fans
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falcon-fans
+  template:
+    metadata:
+      labels:
+        app: falcon-fans
+    spec:
+      containers:
+      - name: falcon-fans
+        image: localhost:32000/falcon-fans:1.0.0
+        envFrom:
+          - configMapRef:
+              name: falcon-fans-config
+          - secretRef:
+              name: falcon-fans-secrets
