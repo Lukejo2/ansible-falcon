@@ -1,0 +1,50 @@
+apiVersion: v1
+data:
+  BORG_REPO: /backup
+kind: ConfigMap
+metadata:
+  labels:
+    app: borg-backup
+  name: borg-backup-config
+  namespace: default
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: borg-backup
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 100
+  suspend: false
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          containers:
+          - name: borg-backup
+            image: localhost:32000/borg-backup:1.0.0
+            imagePullPolicy: Always
+            envFrom:
+            - configMapRef:
+                name: borg-backup-config
+            - secretRef:
+                name: borg-backup-secrets
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+            - name: backup-git
+              mountPath: /backup-source/git/
+          restartPolicy: Never
+          volumes:
+          - name: backup
+            hostPath:
+              path: /mnt/backup
+              type: DirectoryOrCreate
+          - name: backup-git
+            hostPath:
+              path: /data/git
+              type: DirectoryOrCreate
