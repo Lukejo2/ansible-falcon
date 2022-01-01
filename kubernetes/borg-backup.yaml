@@ -36,15 +36,45 @@ spec:
             volumeMounts:
             - name: backup
               mountPath: /backup
-            - name: backup-git
-              mountPath: /backup-source/git/
+            - name: backup-data
+              mountPath: /backup-source/data/
+            - name: backup-etc
+              mountPath: /backup-source/etc/
+            - name: backup-home
+              mountPath: /backup-source/home/
+            - name: backup-root
+              mountPath: /backup-source/root/
+            - name: backup-usr
+              mountPath: /backup-source/usr/
+            - name: backup-var
+              mountPath: /backup-source/var/
           restartPolicy: Never
           volumes:
           - name: backup
             hostPath:
               path: /mnt/backup
               type: DirectoryOrCreate
-          - name: backup-git
+          - name: backup-data
             hostPath:
-              path: /data/git
+              path: /data
+              type: DirectoryOrCreate
+          - name: backup-etc
+            hostPath:
+              path: /etc
+              type: DirectoryOrCreate
+          - name: backup-home
+            hostPath:
+              path: /home
+              type: DirectoryOrCreate
+          - name: backup-root
+            hostPath:
+              path: /root
+              type: DirectoryOrCreate
+          - name: backup-usr
+            hostPath:
+              path: /usr
+              type: DirectoryOrCreate
+          - name: backup-var
+            hostPath:
+              path: /var
               type: DirectoryOrCreate
