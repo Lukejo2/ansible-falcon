@@ -1,0 +1,56 @@
+apiVersion: v1
+data:
+  DB_NAME: django
+  DB_USER: djangoadm
+  DB_HOST: '192.168.1.100'
+  DB_PORT: '5432'
+  DJANGO_SETTINGS_MODULE: django_falcon.settings.prod
+kind: ConfigMap
+metadata:
+  labels:
+    app: django
+  name: django-config
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+  labels:
+    app: django
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+      - name: django
+        image: localhost:32000/django-falcon:1.0.5
+        envFrom:
+            - configMapRef:
+                name: django-config
+            - secretRef:
+                name: django-secrets
+        ports:
+        - containerPort: 8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: django
+  namespace: default
+  labels:
+    app: django
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  selector:
+    app: django
+  type: ClusterIP

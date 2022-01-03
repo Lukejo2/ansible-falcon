@@ -1,252 +1,272 @@
 ---
-- name: Setup Users
+# - name: Setup Users
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Create Falcon user
+#     ansible.builtin.user:
+#       name: falcon
+#       uid: 2000
+#       groups:
+#         - docker
+#         - microk8s
+#   - name: Create Falcon group
+#     ansible.builtin.group:
+#       name: falcon
+#       gid: 2000
+#   - name: Add Falcon ssh keys
+#     authorized_key:
+#       user: falcon
+#       state: present
+#       key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCeSxMImubfmwY+lZ00V58t0haQj71yf4UtETu5wtLKEIoyaUj4yAYiCH0RuyoFNvWE/JoCUGcAJ8s8wOYie5gNZSU2bEyG3xeC0/Kvd7po0jCNxWpM8pym00+Kudk6uKRieYMmmOWbJAYLrAk9DyXbwmEVboTKVWpzLPrZs4NwFI5A6xJKTunhhdMfBamuSaSlkSMHio+GiBnOmgwtrcd6Ec5W8+O8hWixWgWykFIEpQC6JJPHvCsqsOQ6dcBwB7tSuyaItQuHMBhR9pSVJO9tTjTNliPdr39cEAlcnecHV1eLlVrKCfwyct+fjoNF3Od5+Ko48nh54UY7qEXxRAEd luke@DESKTOP-SD5FQHP"
+#   - name: Create git directory
+#     file:
+#       path: "$HOME/git"
+#       mode: "u=rwx"
+#       recurse: yes
+#       state: directory
+# - name: Setup System Packages
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Upgrade OS
+#     apt:
+#       upgrade: dist
+#   - name: Install Required Packages
+#     apt:
+#       pkg:
+#       - git
+#       - python3-pip
+#       - wget
+#       state: present
+#       update_cache: yes
+# - name: Setup Docker
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Install Docker Dependencies
+#     apt:
+#       pkg:
+#       - apt-transport-https
+#       - ca-certificates
+#       - curl
+#       - gnupg-agent
+#       - software-properties-common
+#       state: present
+#       update_cache: yes
+#   - name: add Docker GPG key
+#     apt_key:
+#       url: https://download.docker.com/linux/ubuntu/gpg
+#       state: present
+#   - name: Add docker repository to apt
+#     apt_repository:
+#       repo: deb https://download.docker.com/linux/ubuntu focal stable
+#       state: present
+#   - name: Install docker
+#     apt:
+#       pkg:
+#       - docker-ce
+#       - docker-ce-cli
+#       - containerd.io
+#       state: latest
+#       update_cache: yes
+#   - name: Check Docker Active
+#     service:
+#       name: docker
+#       state: started
+#       enabled: yes
+# - name: Setup MicroK8s
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Install Microk8s
+#     community.general.snap:
+#       name: microk8s
+#       classic: yes
+#       channel: '1.22/stable'
+#   - name: 'Enable Microk8s Addons'
+#     ansible.builtin.shell: microk8s enable dns dashboard helm3 ingress prometheus registry storage
+#   - name: Create .kube directory
+#     file:
+#       path: /home/falcon/.kube
+#       mode: "u=rwx"
+#       recurse: yes
+#       state: directory
+#   - name: Extract kubeconfig file
+#     ansible.builtin.shell: microk8s config > /home/falcon/.kube/config
+#   - name: Change kubeconfig file permission
+#     file:
+#       path: /home/falcon/.kube/config 
+#       owner: "falcon"
+#   - name: Create dashboard token
+#     ansible.builtin.shell: microk8s kubectl -n kube-system describe secret $(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1) > /home/falcon/dashboard-token
+#   - name: Change dashboard token file permission
+#     file:
+#       path: /home/falcon/dashboard-token
+#       mode: '0600'
+#       owner: "falcon" 
+# - name: Setup Docker Images
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Tag and add to local registry
+#     ansible.builtin.shell: |
+#       docker pull {{ item }}
+#       docker tag {{ item }} localhost:32000/{{ item }}
+#       docker push localhost:32000/{{ item }}
+#     with_items:
+#       - adminer:4.8.1
+#       - elasticsearch:7.16.2
+#       - gitea/gitea:1.15.8
+#       - kibana:7.16.2
+#       - postgres:14.1
+#       - registry:2
+#       - ubuntu:20.04
+# - name: Setup Borg Backup
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Clone Repository
+#     ansible.builtin.git:
+#       repo:  https://github.com/Lukejo2/docker-borgbackup.git
+#       depth: 1
+#       force: true
+#       refspec: 4d8bec4814399420c75ae162df99e345ece27fca
+#       dest: $HOME/git/borg-backup
+#       version: 4d8bec4814399420c75ae162df99e345ece27fca
+#     ignore_errors: yes
+#   - name: Build Docker Image
+#     ansible.builtin.shell:
+#       cmd: |
+#         docker build . -t localhost:32000/borg-backup:1.0.0
+#         docker push localhost:32000/borg-backup:1.0.0
+#       chdir: $HOME/git/borg-backup
+# - name: Setup Falcon Fans
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Clone Falcon Fans
+#     ansible.builtin.git:
+#       repo:  https://github.com/Lukejo2/python-falcon-ipmi-fan-driver.git
+#       depth: 1
+#       force: true
+#       refspec: 1fc7151e7118c8960d0feb778fd7832538082aa2
+#       dest: $HOME/git/falcon-fans
+#       version: 1fc7151e7118c8960d0feb778fd7832538082aa2
+#     ignore_errors: yes
+#   - name: Build Docker Image
+#     ansible.builtin.shell:
+#       cmd: |
+#         docker build . -t localhost:32000/falcon-fans:1.0.0
+#         docker push localhost:32000/falcon-fans:1.0.0
+#       chdir: $HOME/git/falcon-fans
+# - name: Setup Fission IO
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Run Fission Helm
+#     ansible.builtin.shell:
+#       cmd: |
+#         export FISSION_NAMESPACE="fission"
+#         microk8s.kubectl create namespace $FISSION_NAMESPACE
+#         microk8s.kubectl create -k "github.com/fission/fission/crds/v1?ref=v1.15.1"
+#         microk8s.helm3 repo add fission-charts https://fission.github.io/fission-charts/
+#         microk8s.helm3 repo update
+#         microk8s.helm3 install --version v1.15.1 --namespace $FISSION_NAMESPACE fission fission-charts/fission-all
+- name: Setup Django
   hosts: falcon
   become: yes
   become_user: root
   tasks:
-  - name: Create Falcon user
-    ansible.builtin.user:
-      name: falcon
-      uid: 2000
-      groups:
-        - docker
-        - microk8s
-  - name: Create Falcon group
-    ansible.builtin.group:
-      name: falcon
-      gid: 2000
-  - name: Add Falcon ssh keys
-    authorized_key:
-      user: falcon
-      state: present
-      key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCeSxMImubfmwY+lZ00V58t0haQj71yf4UtETu5wtLKEIoyaUj4yAYiCH0RuyoFNvWE/JoCUGcAJ8s8wOYie5gNZSU2bEyG3xeC0/Kvd7po0jCNxWpM8pym00+Kudk6uKRieYMmmOWbJAYLrAk9DyXbwmEVboTKVWpzLPrZs4NwFI5A6xJKTunhhdMfBamuSaSlkSMHio+GiBnOmgwtrcd6Ec5W8+O8hWixWgWykFIEpQC6JJPHvCsqsOQ6dcBwB7tSuyaItQuHMBhR9pSVJO9tTjTNliPdr39cEAlcnecHV1eLlVrKCfwyct+fjoNF3Od5+Ko48nh54UY7qEXxRAEd luke@DESKTOP-SD5FQHP"
-  - name: Create git directory
-    file:
-      path: "$HOME/git"
-      mode: "u=rwx"
-      recurse: yes
-      state: directory
-- name: Setup System Packages
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Upgrade OS
-    apt:
-      upgrade: dist
-  - name: Install Required Packages
-    apt:
-      pkg:
-      - git
-      - python3-pip
-      - wget
-      state: present
-      update_cache: yes
-- name: Setup Docker
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Install Docker Dependencies
-    apt:
-      pkg:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg-agent
-      - software-properties-common
-      state: present
-      update_cache: yes
-  - name: add Docker GPG key
-    apt_key:
-      url: https://download.docker.com/linux/ubuntu/gpg
-      state: present
-  - name: Add docker repository to apt
-    apt_repository:
-      repo: deb https://download.docker.com/linux/ubuntu focal stable
-      state: present
-  - name: Install docker
-    apt:
-      pkg:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      state: latest
-      update_cache: yes
-  - name: Check Docker Active
-    service:
-      name: docker
-      state: started
-      enabled: yes
-- name: Setup MicroK8s
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Install Microk8s
-    community.general.snap:
-      name: microk8s
-      classic: yes
-      channel: '1.22/stable'
-  - name: 'Enable Microk8s Addons'
-    ansible.builtin.shell: microk8s enable dns dashboard helm3 ingress prometheus registry storage
-  - name: Create .kube directory
-    file:
-      path: /home/falcon/.kube
-      mode: "u=rwx"
-      recurse: yes
-      state: directory
-  - name: Extract kubeconfig file
-    ansible.builtin.shell: microk8s config > /home/falcon/.kube/config
-  - name: Change kubeconfig file permission
-    file:
-      path: /home/falcon/.kube/config 
-      owner: "falcon"
-  - name: Create dashboard token
-    ansible.builtin.shell: microk8s kubectl -n kube-system describe secret $(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1) > /home/falcon/dashboard-token
-  - name: Change dashboard token file permission
-    file:
-      path: /home/falcon/dashboard-token
-      mode: '0600'
-      owner: "falcon" 
-- name: Setup Docker Images
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Tag and add to local registry
-    ansible.builtin.shell: |
-      docker pull {{ item }}
-      docker tag {{ item }} localhost:32000/{{ item }}
-      docker push localhost:32000/{{ item }}
-    with_items:
-      - adminer:4.8.1
-      - elasticsearch:7.16.2
-      - gitea/gitea:1.15.8
-      - kibana:7.16.2
-      - postgres:14.1
-      - registry:2
-      - ubuntu:20.04
-- name: Setup Borg Backup
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Clone Repository
+  - name: Clone Django
     ansible.builtin.git:
-      repo:  https://github.com/Lukejo2/docker-borgbackup.git
+      repo:  https://github.com/Lukejo2/python-django-falcon.git
       depth: 1
       force: true
-      refspec: 4d8bec4814399420c75ae162df99e345ece27fca
-      dest: $HOME/git/borg-backup
-      version: 4d8bec4814399420c75ae162df99e345ece27fca
+      refspec: 12ac52b6e241bc29a41cf4b6df66e7e2f85b1dd2
+      dest: $HOME/git/python-django-falcon
+      version: 12ac52b6e241bc29a41cf4b6df66e7e2f85b1dd2
     ignore_errors: yes
   - name: Build Docker Image
     ansible.builtin.shell:
       cmd: |
-        docker build . -t localhost:32000/borg-backup:1.0.0
-        docker push localhost:32000/borg-backup:1.0.0
-      chdir: $HOME/git/borg-backup
-- name: Setup Falcon Fans
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Clone Falcon Fans
-    ansible.builtin.git:
-      repo:  https://github.com/Lukejo2/python-falcon-ipmi-fan-driver.git
-      depth: 1
-      force: true
-      refspec: 1fc7151e7118c8960d0feb778fd7832538082aa2
-      dest: $HOME/git/falcon-fans
-      version: 1fc7151e7118c8960d0feb778fd7832538082aa2
-    ignore_errors: yes
-  - name: Build Docker Image
-    ansible.builtin.shell:
-      cmd: |
-        docker build . -t localhost:32000/falcon-fans:1.0.0
-        docker push localhost:32000/falcon-fans:1.0.0
-      chdir: $HOME/git/falcon-fans
-- name: Setup Fission IO
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Run Fission Helm
-    ansible.builtin.shell:
-      cmd: |
-        export FISSION_NAMESPACE="fission"
-        microk8s.kubectl create namespace $FISSION_NAMESPACE
-        microk8s.kubectl create -k "github.com/fission/fission/crds/v1?ref=v1.15.1"
-        microk8s.helm3 repo add fission-charts https://fission.github.io/fission-charts/
-        microk8s.helm3 repo update
-        microk8s.helm3 install --version v1.15.1 --namespace $FISSION_NAMESPACE fission fission-charts/fission-all
-- name: Setup Minecraft
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Clone Minecraft
-    ansible.builtin.git:
-      repo:  https://github.com/Lukejo2/docker-minecraft.git
-      depth: 1
-      force: true
-      refspec: a2598520d99d779424969a191828fc7d78577760
-      dest: $HOME/git/docker-minecraft
-      version: a2598520d99d779424969a191828fc7d78577760
-    ignore_errors: yes
-  - name: Download server.jar
-    ansible.builtin.shell:
-      cmd: |
-        # TODO : Only download if server.jar does not exist
-        wget https://launcher.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar
-      chdir: $HOME/git/docker-minecraft  
-  - name: Build Docker Image
-    ansible.builtin.shell:
-      cmd: |
-        docker build . -t localhost:32000/minecraft:1.18.1
-        docker push localhost:32000/minecraft:1.18.1
-      chdir: $HOME/git/docker-minecraft
-- name: Setup Samba
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Clone Samba
-    ansible.builtin.git:
-      repo:  https://github.com/Lukejo2/docker-samba.git
-      depth: 1
-      force: true
-      refspec: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
-      dest: $HOME/git/docker-samba
-      version: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
-    ignore_errors: yes
-  - name: Build Docker Image
-    ansible.builtin.shell:
-      cmd: |
-        docker build . -t localhost:32000/samba:4.15.2
-        docker push localhost:32000/samba:4.15.2
-      chdir: $HOME/git/docker-samba
-- name: Setup Plex
-  hosts: falcon
-  become: yes
-  become_user: root
-  tasks:
-  - name: Clone Plex
-    ansible.builtin.git:
-      repo: 'https://github.com/plexinc/pms-docker.git'
-      depth: 1
-      force: true
-      refspec: 766870b75cf72916e0930856d5a15e7f579bbe88
-      dest: $HOME/git/pms-docker
-      version: 766870b75cf72916e0930856d5a15e7f579bbe88
-    ignore_errors: yes
-  - name: Build Docker Image
-    ansible.builtin.shell:
-      cmd: |
-        docker build -t localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88 -f Dockerfile.arm64 .
-        docker push localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88
-      chdir: $HOME/git/pms-docker
+        docker build . -t localhost:32000/django-falcon:1.0.5
+        docker push localhost:32000/django-falcon:1.0.5
+      chdir: $HOME/git/python-django-falcon
+# - name: Setup Minecraft
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Clone Minecraft
+#     ansible.builtin.git:
+#       repo:  https://github.com/Lukejo2/docker-minecraft.git
+#       depth: 1
+#       force: true
+#       refspec: a2598520d99d779424969a191828fc7d78577760
+#       dest: $HOME/git/docker-minecraft
+#       version: a2598520d99d779424969a191828fc7d78577760
+#     ignore_errors: yes
+#   - name: Download server.jar
+#     ansible.builtin.shell:
+#       cmd: |
+#         # TODO : Only download if server.jar does not exist
+#         wget https://launcher.mojang.com/v1/objects/125e5adf40c659fd3bce3e66e67a16bb49ecc1b9/server.jar
+#       chdir: $HOME/git/docker-minecraft  
+#   - name: Build Docker Image
+#     ansible.builtin.shell:
+#       cmd: |
+#         docker build . -t localhost:32000/minecraft:1.18.1
+#         docker push localhost:32000/minecraft:1.18.1
+#       chdir: $HOME/git/docker-minecraft
+# - name: Setup Samba
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Clone Samba
+#     ansible.builtin.git:
+#       repo:  https://github.com/Lukejo2/docker-samba.git
+#       depth: 1
+#       force: true
+#       refspec: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
+#       dest: $HOME/git/docker-samba
+#       version: ab22d0dc22846fff9420cbd1e71d11d29b8454f8
+#     ignore_errors: yes
+#   - name: Build Docker Image
+#     ansible.builtin.shell:
+#       cmd: |
+#         docker build . -t localhost:32000/samba:4.15.2
+#         docker push localhost:32000/samba:4.15.2
+#       chdir: $HOME/git/docker-samba
+# - name: Setup Plex
+#   hosts: falcon
+#   become: yes
+#   become_user: root
+#   tasks:
+#   - name: Clone Plex
+#     ansible.builtin.git:
+#       repo: 'https://github.com/plexinc/pms-docker.git'
+#       depth: 1
+#       force: true
+#       refspec: 766870b75cf72916e0930856d5a15e7f579bbe88
+#       dest: $HOME/git/pms-docker
+#       version: 766870b75cf72916e0930856d5a15e7f579bbe88
+#     ignore_errors: yes
+#   - name: Build Docker Image
+#     ansible.builtin.shell:
+#       cmd: |
+#         docker build -t localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88 -f Dockerfile.arm64 .
+#         docker push localhost:32000/pms-docker:766870b75cf72916e0930856d5a15e7f579bbe88
+#       chdir: $HOME/git/pms-docker
 - name: Create Kubernetes Deployments
   hosts: falcon
   become: yes
@@ -269,6 +289,7 @@
     with_items:
      - adminer.yaml
      - borg-backup.yaml
+     - django.yaml
      - elastic.yaml
      - falcon-fans.yaml
      - gitea.yaml
@@ -295,6 +316,7 @@
      - secrets.yaml
      - adminer.yaml
      - borg-backup.yaml
+     - django.yaml
      - elastic.yaml
      - falcon-fans.yaml
      - gitea.yaml

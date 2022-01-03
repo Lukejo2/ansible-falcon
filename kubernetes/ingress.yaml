@@ -15,6 +15,13 @@ spec:
             name: adminer
             port:
               number: 80
+      - path: /django(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: django
+            port:
+              number: 80
       - path: /git(/|$)(.*)
         pathType: Prefix
         backend:
@@ -29,3 +36,4 @@ spec:
             name: kibana
             port:
               number: 80
+
